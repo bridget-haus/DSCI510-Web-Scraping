@@ -254,6 +254,7 @@ def insert_rank_table():
 def insert_demographic_table():
 
     demographic_data = get_demographic_stats(demographic_base_url)
+    cleaned_list = []
 
     for response in demographic_data:
         for result in response['results']:
@@ -264,17 +265,19 @@ def insert_demographic_table():
             cur.execute("SELECT primary_key from College WHERE college_name = ?", (college_name,))
             primary_key = cur.fetchall()
             if len(primary_key) > 0:
-                college_primary_key = primary_key[0][0]
-                table_year = 2013
-                for year in final[:-1]:
-                    admission_rate = result[year[0]]
-                    sat_overall = result[year[1]]
-                    loan_completion_rate = result[year[2]]
-                    median_income = result[year[3]]
-                    percent_black = result[year[4]]
-                    percent_hispanic = result[year[5]]
-                    cur.execute('INSERT INTO Demographics (primary_key, year, admission_rate, sat_overall, loan_completion_rate, percent_black, percent_hispanic, median_income, college_primary_key) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )', (None, table_year, admission_rate, sat_overall, loan_completion_rate, percent_black, percent_hispanic, median_income, college_primary_key))
-                    table_year += 1   
+                if primary_key[0][0] not in cleaned_list:
+                    college_primary_key = primary_key[0][0]
+                    cleaned_list.append(college_primary_key)
+                    table_year = 2013
+                    for year in final[:-1]:
+                        admission_rate = result[year[0]]
+                        sat_overall = result[year[1]]
+                        loan_completion_rate = result[year[2]]
+                        median_income = result[year[3]]
+                        percent_black = result[year[4]]
+                        percent_hispanic = result[year[5]]
+                        cur.execute('INSERT INTO Demographics (primary_key, year, admission_rate, sat_overall, loan_completion_rate, percent_black, percent_hispanic, median_income, college_primary_key) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )', (None, table_year, admission_rate, sat_overall, loan_completion_rate, percent_black, percent_hispanic, median_income, college_primary_key))
+                        table_year += 1   
 
     conn.commit()
 
