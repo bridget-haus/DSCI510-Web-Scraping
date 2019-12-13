@@ -15,19 +15,18 @@ tuition_url = 'https://phillips-scholarship.org/new-applicants/cost-of-college-l
 demographic_base_url = 'https://api.data.gov/ed/collegescorecard/v1/schools'
 demographic_api_key = '6sX5SOPjUqItWIRHi5xxUBOc3Hu0SijTazi2oYxp'
 
+#make surecorrect path for creating db
+
 path = os.getcwd()
-print(path)
 path = path.split('/')
 last_val = path[-1:]
-print(path)
-print(last_val)
 while last_val[0] != 'inf510_project' :
     path = path[:-1]
     last_val = path[-1:]
     
 dbPath = "/".join(path) + '/data/college.db'
 
-
+#create db
 
 conn = sqlite3.connect(dbPath)
 cur = conn.cursor()

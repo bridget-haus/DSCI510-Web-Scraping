@@ -15,7 +15,8 @@ from numpy import std
 from scipy.stats import pearsonr
 import os
 
-#Connect to db
+#make sure user has correct path for connecting to db
+
 path = os.getcwd()
 path = path.split('/')
 last_val = path[-1:]
@@ -25,18 +26,19 @@ while last_val[0] != 'inf510_project' :
     
 dbPath = '/'.join(path) + '/data/college.db'
 
+#connect to db
+
 conn = sqlite3.connect(dbPath)
 cur = conn.cursor()
 
-cur.execute('select * from college')
-result = cur.fetchall()
-print(result)
+#global variables
 
 counter_map = []
 user_input = int()
 fields = ['admission_rate', 'sat_overall', 'loan_completion_rate', 'percent_black', 'percent_hispanic', 'median_income']
 colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow']
 
+#main function to call use functions
 def main():
     print('What would you like to do? Please select the number of the options below')
     print('1. Analyze a single school')
@@ -52,6 +54,7 @@ def main():
     else:
         print('Invalid input. Please select the number of the choice above')
 
+#prompts user to select school for analysis
 def input_function():
 
     global counter_map
@@ -75,6 +78,9 @@ def input_function():
         except:
             print('Invalid input. Please select the number of the school you would like to analyze.')    
 
+
+#produces graph and slope of US News Rank trend
+#outputs graph and slope to terminal
 def rank_trend():
 
     global counter_map
@@ -89,9 +95,11 @@ def rank_trend():
     if y[0][0] != None:
         sns.set()
         ax = plt.figure().gca()
+        #forces integer axis
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         res = [i[0] for i in y]
         ys = np.array(res, dtype=np.float64)
+        #computes best fit slope
         m = best_fit_slope(xs,ys)
         if round(m, 5) < 0:
             m_sign = 'negative'
@@ -100,13 +108,18 @@ def rank_trend():
             m_sign = 'positive'
             m_interpretation = 'As year increases, the US News Rank generally worsens'
         plt.plot(xs, ys, color = 'black', linewidth=4)
+        #plot best fit line
         plt.plot(np.unique(xs), np.poly1d(np.polyfit(xs, ys, 1))(np.unique(xs)), linestyle='dashed')
+        #inverts y-axis
         plt.ylim(plt.ylim()[::-1])
         plt.xlabel('Year')
         plt.ylabel('US News Rank')
         plt.title(f'{title[0][0]} US News Rank Trend')
         plt.show(block=True)
         print(f'The slope of the best fit regression line is a {m_sign} value: {round(m, 5)}')
+
+#produces graphs and slopes of demogrpahic variable trends
+
 def demographics_trend():
 
     global counter_map
@@ -124,23 +137,30 @@ def demographics_trend():
             field_name = fields[i].title().replace('_', ' ')
             sns.set()
             ax = plt.figure().gca()
+            #forces integer axis
             ax.xaxis.set_major_locator(MaxNLocator(integer=True))
             cur.execute('select median_income from Demographics where year = 2016 and college_primary_key = ?', (counter_map[user_input - 1],))
+            #assigns default value of previous year for missing data
             default = cur.fetchall()[0][0]
             res = [default if i[0] == None else i[0] for i in y]
             ys = np.array(res, dtype=np.float64)
+            #computes best fit slope
             m = best_fit_slope(xs,ys)
             if m < 0:
                 m_sign = 'negative'
             else:
                 m_sign = 'positive'
             plt.plot(xs, ys, color = colors[i], linewidth=4)
+            #plot best fit line
             plt.plot(np.unique(xs), np.poly1d(np.polyfit(xs, ys, 1))(np.unique(xs)), linestyle='dashed')
             plt.title(f'{title[0][0]} {field_name} Trend')
             plt.xlabel('Year')
             plt.ylabel(field_name)
             plt.show(block=True)
             print(f'The slope of the best fit regression line is a {m_sign} value: {round(m, 5)}')
+
+
+#produces graphs and correlational coefficients for all schools
 
 def correlation__demographics():
 
@@ -154,17 +174,21 @@ def correlation__demographics():
         fields_select = f'SELECT {fields[i]} FROM Rank JOIN College ON Rank.college_primary_key = College.primary_key JOIN Demographics on rank.college_primary_key = demographics.college_primary_key AND rank.year = demographics.year WHERE {fields[i]} is not null and rank < 2018'
         cur.execute(fields_select)
         x = cur.fetchall()
+        #converts all integers to float
         xs = [float(number[0]) for number in x]
         field_name = fields[i].title().replace('_', ' ')
         plt.scatter(xs, ys, color = colors[i])
         plt.ylim(plt.ylim()[::-1])
+        #plot best fit line
         plt.plot(np.unique(xs), np.poly1d(np.polyfit(xs, ys, 1))(np.unique(xs)), linestyle='dashed')
         plt.title(f'{field_name} vs US News Rank')
         plt.xlabel(field_name)
         plt.ylabel("US News Rank")
         plt.show(block=True)
+        #outputs mean and std dev for each graph
         print(f'US News Rank: mean={round(mean(ys),3)} stdv={round(std(ys),3)}')
         print(f'{field_name}: mean={round(mean(xs),3)} stdv={round(std(xs),3)}')
+        #computes pearson correlational coefficient
         corr = pearsonr(xs, ys)
         print(f'Pearson correlational coefficient: {round(corr[0], 3)}')
 
@@ -179,20 +203,25 @@ def correlation__tuition():
         fields_select = f'SELECT {fields[i]} FROM Rank JOIN College ON Rank.college_primary_key = College.primary_key JOIN Tuition on rank.college_primary_key = tuition.college_primary_key WHERE NULLIF({fields[i]}, "") IS NOT NULL and rank IS NOT NULL'
         cur.execute(fields_select)
         x = cur.fetchall()
+        #convert strings to floats
         xs = [float(number[0][1:].replace(',', '')) for number in x]
         field_name = fields[i].title().replace('_', ' ')
         plt.scatter(xs, ys, color = colors[i])
+        #inverts y-axis
         plt.ylim(plt.ylim()[::-1])
         plt.plot(np.unique(xs), np.poly1d(np.polyfit(xs, ys, 1))(np.unique(xs)), linestyle='dashed')
         plt.title(f'{field_name} vs US News Rank')
         plt.xlabel(field_name)
         plt.ylabel("US News Rank")
         plt.show(block=True)
+        #outputs mean and std dev for each graph
         print(f'US News Rank: mean={round(mean(ys),3)} stdv={round(std(ys),3)}')
         print(f'{field_name}: mean={round(mean(xs),3)} stdv={round(std(xs),3)}')
+        #computes pearson correlational coefficient
         corr = pearsonr(xs, ys)
         print(f'Pearson correlational coefficient: {round(corr[0], 3)}')
 
+#helper function to create a linear best fit model
 
 def best_fit_slope(xs,ys):
     m = (((mean(xs)*mean(ys)) - mean(xs*ys)) /
