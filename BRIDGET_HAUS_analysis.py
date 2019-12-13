@@ -13,24 +13,10 @@ import numpy as np
 from numpy import mean
 from numpy import std
 from scipy.stats import pearsonr
-import os
 
 #Connect to db
-path = os.getcwd()
-path = path.split('/')
-last_val = path[-1:]
-while last_val[0] != 'inf510_project' :
-    path = path[:-1]
-    last_val = path[-1:]
-    
-dbPath = '/'.join(path) + '/data/college.db'
-
-conn = sqlite3.connect(dbPath)
+conn = sqlite3.connect('college.db')
 cur = conn.cursor()
-
-cur.execute('select * from fksdj')
-result = cur.fetchall()
-print(result)
 
 counter_map = []
 user_input = int()

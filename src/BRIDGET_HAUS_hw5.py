@@ -8,13 +8,23 @@ from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 rank_stats_url = 'https://publicuniversityhonors.com/2016/09/18/average-u-s-news-rankings-for-126-universities-2010-1017/'
 tuition_url = 'https://phillips-scholarship.org/new-applicants/cost-of-college-list/'
 demographic_base_url = 'https://api.data.gov/ed/collegescorecard/v1/schools'
 demographic_api_key = '6sX5SOPjUqItWIRHi5xxUBOc3Hu0SijTazi2oYxp'
 
-conn = sqlite3.connect('college.db')
+path = os.getcwd()
+path = path.split('/')
+last_val = path[-1:]
+while last_val[0] != 'inf510_project' :
+    path = path[:-1]
+    last_val = path[-1:]
+    
+dbPath = "/".join(path) + '/data/college.db'
+
+conn = sqlite3.connect(dbPath)
 cur = conn.cursor()
 
 def main():
@@ -123,8 +133,9 @@ def get_rank_stats(url):
 def get_demographic_stats(api_url):
 
     rank_data = get_rank_stats(rank_stats_url)
+    rank_map_data = fuzzy_wuzzy_mapping(rank_data)
 
-    years = list(range(2013, 2017))
+    years = list(range(2013, 2018))
     json_response_list = []
     admission_rate = ''
     loan_completion_rate = ''
@@ -141,7 +152,7 @@ def get_demographic_stats(api_url):
         median_income = str(year) + '.student.demographics.median_family_income,' + median_income
     fields_base = '?fields=school.name,' + admission_rate + loan_completion_rate + sat_score + percent_black + percent_hispanic + median_income
     demographic_url = api_url + fields_base
-    for college in rank_data:
+    for college in rank_map_data:
         demographic_params = {'school.name': college[0].replace(',',''), 'api_key': demographic_api_key}
         json_response = requests.get(demographic_url, params=demographic_params)
         json_response_list.append(json_response.json())
@@ -151,14 +162,29 @@ def get_demographic_stats(api_url):
 
 def fuzzy_wuzzy_mapping(original_data):
 
+    rank_data = get_rank_stats(rank_stats_url)
     tuition_data = get_tuition_stats(tuition_url)
 
     mapping_list = []
+    cleaned_list = []
+
     for i in range(len(tuition_data)):
         mapping_list.append(tuition_data[i][0])
 
     for i in range(len(original_data)):
-        original_data[i][0] = process.extract(original_data[i][0], mapping_list, limit=1)[0][0]
+        if f'{original_data[i][0]} University' in mapping_list:
+            original_data[i][0] = f'{original_data[i][0]} University'
+        elif f'University of {original_data[i][0]}' in mapping_list:
+            original_data[i][0] = f'University of {original_data[i][0]}'
+        elif 'UC' in original_data[i][0]:
+            original_data[i][0] = f'University of California {original_data[i][0]}'
+        x = process.extract(original_data[i][0], mapping_list, limit=1)[0][0]
+        if x not in cleaned_list:
+            cleaned_list.append(x)
+            original_data[i][0] = x
+        else:
+            original_data[i][0] = 'No Match'
+    
     return original_data
 
 #creates SQL tables
@@ -187,6 +213,8 @@ def insert_college_table():
         college_name = tuition_data[i][0]
         cur.execute("INSERT INTO College (primary_key, college_name) VALUES (?, ?)", (None, college_name))
 
+    conn.commit()
+
 def insert_tuition_table():
     
     tuition_data = get_tuition_stats(tuition_url)
@@ -198,6 +226,8 @@ def insert_tuition_table():
         out_state_tuition = tuition_data[i][2]
         room_board = tuition_data[i][3]
         cur.execute('INSERT INTO Tuition (primary_key, in_state_tuition, out_state_tuition, room_board, college_primary_key) VALUES ( ?, ?, ?, ?, ? )', (None, in_state_tuition, out_state_tuition, room_board, college_primary_key))
+
+    conn.commit()
 
 def insert_rank_table():
 
@@ -211,6 +241,8 @@ def insert_rank_table():
             year = rank_map_data[i][j+1][0]
             rank = rank_map_data[i][j+1][1]
             cur.execute('INSERT INTO Rank (primary_key, year, rank, college_primary_key) VALUES ( ?, ?, ?, ? )', (None, year, rank, college_primary_key))
+
+    conn.commit()
 
 def insert_demographic_table():
 
@@ -235,7 +267,9 @@ def insert_demographic_table():
                     percent_black = result[year[4]]
                     percent_hispanic = result[year[5]]
                     cur.execute('INSERT INTO Demographics (primary_key, year, admission_rate, sat_overall, loan_completion_rate, percent_black, percent_hispanic, median_income, college_primary_key) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )', (None, table_year, admission_rate, sat_overall, loan_completion_rate, percent_black, percent_hispanic, median_income, college_primary_key))
-                    table_year += 1     
+                    table_year += 1   
+
+    conn.commit()
 
 if __name__ == '__main__':
     main()
