@@ -43,16 +43,22 @@ def main():
     print('What would you like to do? Please select the number of the options below')
     print('1. Analyze a single school')
     print('2. Analyze all schools together')
-    main_input = int(input())
-    if main_input == 1:
-        input_function()
-        rank_trend()
-        demographics_trend()
-    elif main_input == 2:
-        correlation__demographics()
-        correlation__tuition()
-    else:
-        print('Invalid input. Please select the number of the choice above')
+    while True:
+        try:
+            main_input = int(input())
+            if main_input == 1:
+                input_function()
+                rank_trend()
+                demographics_trend()
+                break
+            elif main_input == 2:
+                correlation__demographics()
+                correlation__tuition()
+                break
+            else:
+                print('Invalid input. Please select the number of the choice above')
+        except ValueError:
+            print('Invalid input. Please select the number of the choice above')
 
 #prompts user to select school for analysis
 def input_function():
