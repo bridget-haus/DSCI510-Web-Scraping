@@ -28,7 +28,7 @@ dbPath = '/'.join(path) + '/data/college.db'
 conn = sqlite3.connect(dbPath)
 cur = conn.cursor()
 
-cur.execute('select * from fksdj')
+cur.execute('select * from college')
 result = cur.fetchall()
 print(result)
 

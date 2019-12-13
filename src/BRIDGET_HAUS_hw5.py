@@ -16,18 +16,24 @@ demographic_base_url = 'https://api.data.gov/ed/collegescorecard/v1/schools'
 demographic_api_key = '6sX5SOPjUqItWIRHi5xxUBOc3Hu0SijTazi2oYxp'
 
 path = os.getcwd()
+print(path)
 path = path.split('/')
 last_val = path[-1:]
+print(path)
+print(last_val)
 while last_val[0] != 'inf510_project' :
     path = path[:-1]
     last_val = path[-1:]
     
 dbPath = "/".join(path) + '/data/college.db'
 
+
+
 conn = sqlite3.connect(dbPath)
 cur = conn.cursor()
 
 def main():
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--source', help = 'remote or local')
     args = parser.parse_args()
@@ -234,14 +240,16 @@ def insert_rank_table():
     rank_data = get_rank_stats(rank_stats_url)
     rank_map_data = fuzzy_wuzzy_mapping(rank_data)
 
-    for i in range(len(rank_map_data)):
+    for i in range(len(rank_map_data) - 1):
         cur.execute("SELECT primary_key from College WHERE college_name = ?", (rank_map_data[i][0],))
-        college_primary_key = cur.fetchall()[0][0]
-        for j in range(len(rank_map_data[0])-1):
-            year = rank_map_data[i][j+1][0]
-            rank = rank_map_data[i][j+1][1]
-            cur.execute('INSERT INTO Rank (primary_key, year, rank, college_primary_key) VALUES ( ?, ?, ?, ? )', (None, year, rank, college_primary_key))
-
+        result = cur.fetchall()
+        if len(result) > 0:
+            college_primary_key = result[0][0]
+            for j in range(len(rank_map_data[0])-1):
+                year = rank_map_data[i][j+1][0]
+                rank = rank_map_data[i][j+1][1]
+                cur.execute('INSERT INTO Rank (primary_key, year, rank, college_primary_key) VALUES ( ?, ?, ?, ? )', (None, year, rank, college_primary_key))
+    
     conn.commit()
 
 def insert_demographic_table():
